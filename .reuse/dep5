@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: rodvk
+Upstream-Contact: <https://github.com/purefunsolutions>
+Source: https://github.com/mikatammi/rodvk
+
+Copyright: 2024 Mika Tammi <https://github.com/purefunsolutions/>
+License: MIT
+Files: *.lock *.json docs/*.svg *.conf
