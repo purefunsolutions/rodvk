@@ -5,8 +5,11 @@
 # Packages to be exported from the flake
 {
   perSystem = {pkgs, ...}: {
-    packages = {
+    packages = let
       rodvk = pkgs.callPackage ../rodvk {};
+      default = rodvk;
+    in {
+      inherit default rodvk;
     };
   };
 }
