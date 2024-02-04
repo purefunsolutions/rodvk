@@ -6,6 +6,7 @@
 {
   darwin,
   lib,
+  makeWrapper,
   rustPlatform,
   stdenv,
 }:
@@ -15,14 +16,17 @@ rustPlatform.buildRustPackage {
 
   src = ./.;
 
+  nativeBuildInputs = lib.optionals stdenv.isDarwin [makeWrapper];
+
   buildInputs = lib.optionals stdenv.isDarwin (
     with darwin.apple_sdk.frameworks; [
       AppKit
     ]
   );
 
-  postInstall = ''
-    ln -s ${darwin.moltenvk}/lib/libMoltenVK.dylib $out/bin/libMoltenVK.dylib
+  postInstall = lib.optionalString stdenv.isDarwin ''
+    wrapProgram $out/bin/rodvk \
+      --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [darwin.moltenvk]}
   '';
   cargoLock.lockFile = ./Cargo.lock;
 }
