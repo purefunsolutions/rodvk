@@ -20,3 +20,6 @@ Run flake checks
 Show flake outputs
 ------------------
 `nix flake show`
+
+SPDX-FileCopyrightText: 2024 Mika Tammi
+SPDX-License-Identifier: MIT
