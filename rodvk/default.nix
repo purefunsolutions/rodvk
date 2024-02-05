@@ -9,6 +9,7 @@
   makeWrapper,
   rustPlatform,
   stdenv,
+  vulkan-loader,
 }:
 rustPlatform.buildRustPackage {
   pname = "rodvk";
@@ -16,7 +17,7 @@ rustPlatform.buildRustPackage {
 
   src = ./.;
 
-  nativeBuildInputs = lib.optionals stdenv.isDarwin [makeWrapper];
+  nativeBuildInputs = lib.optionals (stdenv.isDarwin || stdenv.isLinux) [makeWrapper];
 
   buildInputs = lib.optionals stdenv.isDarwin (
     with darwin.apple_sdk.frameworks; [
@@ -24,9 +25,14 @@ rustPlatform.buildRustPackage {
     ]
   );
 
-  postInstall = lib.optionalString stdenv.isDarwin ''
-    wrapProgram $out/bin/rodvk \
-      --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [darwin.moltenvk]}
-  '';
+  postInstall =
+    lib.optionalString stdenv.isDarwin ''
+      wrapProgram $out/bin/rodvk \
+        --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [darwin.moltenvk]}
+    ''
+    + lib.optionalString stdenv.isLinux ''
+      wrapProgram $out/bin/rodvk \
+        --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [vulkan-loader]}
+    '';
   cargoLock.lockFile = ./Cargo.lock;
 }
