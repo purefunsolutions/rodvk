@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 fn main() -> anyhow::Result<()> {
+    use std::sync::Arc;
     use vulkano::{
         instance::{Instance, InstanceCreateFlags, InstanceCreateInfo},
         swapchain::Surface,
@@ -19,7 +20,7 @@ fn main() -> anyhow::Result<()> {
 
     let library = VulkanLibrary::new().expect("no local Vulkan library/DLL");
     let required_extensions = Surface::required_extensions(&event_loop);
-    let _instance = Instance::new(
+    let instance = Instance::new(
         library,
         InstanceCreateInfo {
             flags: InstanceCreateFlags::ENUMERATE_PORTABILITY,
@@ -29,10 +30,14 @@ fn main() -> anyhow::Result<()> {
     )
     .expect("failed to create instance");
 
-    let window = WindowBuilder::new()
-        .with_title("rodvk")
-        .build(&event_loop)
-        .expect("failed to build a window");
+    let window = Arc::new(
+        WindowBuilder::new()
+            .with_title("rodvk")
+            .build(&event_loop)
+            .expect("failed to build a window"),
+    );
+
+    let _surface = Surface::from_window(instance.clone(), window.clone());
 
     event_loop.set_control_flow(ControlFlow::Poll);
     event_loop.run(move |event, elwt| {
