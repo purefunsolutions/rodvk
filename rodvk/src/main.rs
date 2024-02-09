@@ -2,11 +2,35 @@
 //
 // SPDX-License-Identifier: MIT
 
+use std::sync::Arc;
+use vulkano::{device::Device, render_pass::RenderPass, swapchain::Swapchain};
+
+fn get_render_pass(device: Arc<Device>, swapchain: &Arc<Swapchain>) -> Arc<RenderPass> {
+    vulkano::single_pass_renderpass!(
+        device,
+        attachments: {
+            color: {
+                // Set the format the same as the swapchain.
+                format: swapchain.image_format(),
+                samples: 1,
+                load_op: Clear,
+                store_op: Store,
+            },
+        },
+        pass: {
+            color: [color],
+            depth_stencil: {},
+        },
+    )
+    .unwrap()
+}
+
 fn main() -> anyhow::Result<()> {
-    use std::sync::Arc;
     use vulkano::{
+        device::{DeviceCreateInfo, DeviceExtensions, QueueCreateInfo},
+        image::ImageUsage,
         instance::{Instance, InstanceCreateFlags, InstanceCreateInfo},
-        swapchain::Surface,
+        swapchain::{Surface, SwapchainCreateInfo},
         VulkanLibrary,
     };
     use winit::{
@@ -37,7 +61,64 @@ fn main() -> anyhow::Result<()> {
             .expect("failed to build a window"),
     );
 
-    let _surface = Surface::from_window(instance.clone(), window.clone());
+    let surface =
+        Surface::from_window(instance.clone(), window.clone()).expect("could not create surface");
+
+    // TODO: Fix this with proper way to select physical device
+    // Select first physical device available
+    let physical = instance
+        .enumerate_physical_devices()
+        .expect("could not enumerate devices")
+        .next()
+        .expect("no devices available");
+
+    let required_device_extensions = DeviceExtensions {
+        khr_swapchain: true,
+        ..DeviceExtensions::empty()
+    };
+
+    let queue_family_index = 0;
+    let (device, mut queues) = Device::new(
+        physical.clone(),
+        DeviceCreateInfo {
+            queue_create_infos: vec![QueueCreateInfo {
+                queue_family_index,
+                ..Default::default()
+            }],
+            enabled_extensions: required_device_extensions,
+            ..Default::default()
+        },
+    )
+    .expect("failed to create device");
+
+    let _queue = queues.next().unwrap();
+
+    let caps = physical
+        .surface_capabilities(&surface, Default::default())
+        .expect("failed to get surface capabilities");
+
+    let dimensions = window.inner_size();
+    let composite_alpha = caps.supported_composite_alpha.into_iter().next().unwrap();
+    let image_format = physical
+        .surface_formats(&surface, Default::default())
+        .unwrap()[0]
+        .0;
+
+    let (swapchain, _images) = Swapchain::new(
+        device.clone(),
+        surface.clone(),
+        SwapchainCreateInfo {
+            min_image_count: caps.min_image_count + 1, // How many buffers to use in swapchain
+            image_format,
+            image_extent: dimensions.into(),
+            image_usage: ImageUsage::COLOR_ATTACHMENT,
+            composite_alpha,
+            ..Default::default()
+        },
+    )
+    .expect("cannot create swapchain");
+
+    let _render_pass = get_render_pass(device.clone(), &swapchain);
 
     event_loop.set_control_flow(ControlFlow::Poll);
     event_loop.run(move |event, elwt| {
