@@ -3,7 +3,12 @@
 // SPDX-License-Identifier: MIT
 
 use std::sync::Arc;
-use vulkano::{device::Device, render_pass::RenderPass, swapchain::Swapchain};
+use vulkano::{
+    device::Device,
+    image::{view::ImageView, Image},
+    render_pass::{Framebuffer, FramebufferCreateInfo, RenderPass},
+    swapchain::Swapchain,
+};
 
 fn get_render_pass(device: Arc<Device>, swapchain: &Arc<Swapchain>) -> Arc<RenderPass> {
     vulkano::single_pass_renderpass!(
@@ -23,6 +28,23 @@ fn get_render_pass(device: Arc<Device>, swapchain: &Arc<Swapchain>) -> Arc<Rende
         },
     )
     .unwrap()
+}
+
+fn get_framebuffers(images: &[Arc<Image>], render_pass: &Arc<RenderPass>) -> Vec<Arc<Framebuffer>> {
+    images
+        .iter()
+        .map(|image| {
+            let view = ImageView::new_default(image.clone()).unwrap();
+            Framebuffer::new(
+                render_pass.clone(),
+                FramebufferCreateInfo {
+                    attachments: vec![view],
+                    ..Default::default()
+                },
+            )
+            .unwrap()
+        })
+        .collect::<Vec<_>>()
 }
 
 fn main() -> anyhow::Result<()> {
@@ -104,7 +126,7 @@ fn main() -> anyhow::Result<()> {
         .unwrap()[0]
         .0;
 
-    let (swapchain, _images) = Swapchain::new(
+    let (swapchain, images) = Swapchain::new(
         device.clone(),
         surface.clone(),
         SwapchainCreateInfo {
@@ -118,7 +140,8 @@ fn main() -> anyhow::Result<()> {
     )
     .expect("cannot create swapchain");
 
-    let _render_pass = get_render_pass(device.clone(), &swapchain);
+    let render_pass = get_render_pass(device.clone(), &swapchain);
+    let _framebuffers = get_framebuffers(&images, &render_pass);
 
     event_loop.set_control_flow(ControlFlow::Poll);
     event_loop.run(move |event, elwt| {
